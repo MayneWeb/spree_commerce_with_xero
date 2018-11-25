@@ -1,6 +1,6 @@
 Spree::CheckoutController.class_eval do
   # Initializing xero to use @xero variable
-  before_filter :get_xero
+  before_action :get_xero
 
   def update
     if @order.update_from_params(params, permitted_checkout_attributes, request.headers.env)
@@ -11,7 +11,7 @@ Spree::CheckoutController.class_eval do
       end
 
       if @order.completed?
-        if spree_current_user.xero_customer_id.nil?
+        if !spree_current_user.xero_customer_id.nil?
           contact_id = spree_current_user.xero_customer_id
         else
           contact_id = create_xero_contact_and_return_contact_id
@@ -19,16 +19,16 @@ Spree::CheckoutController.class_eval do
 
         invoice = build_xero_invoice(contact_id)
 
-        add_line_items_to_invoice(invoice)
+        invoice = add_line_items_to_invoice(invoice)
 
-        # Optional
-        add_shipping_to_line_items(invoice)
 
         # Save the invoice
+        puts "SAVING INVOICE =====>>>>"
         invoice.save
 
         # Optional
         # Invoice must be saved, in xero, before you can mark an invoice paid
+        puts "MARKING INVOICE PAID =====>>>>"
         marke_invoice_as_paid(invoice)
 
         @current_order = nil
@@ -62,14 +62,18 @@ Spree::CheckoutController.class_eval do
         type:           "STREET",
         line1:           user_address.address1,
         line2:           user_address.address2,
-        city:           user_address.city,
+        city:            user_address.city,
         postal_code:     user_address.zipcode,
         country:         Spree::Country.find(country_id).name,
-        contact_number: user_address.phone
+        # contact_number: user_address.phone # As of Xeroizer version 2.18
+        # This will through an error undefined method [] for nil:NilClass
       )
 
-      # Save contact to your xero account
-      contact.save
+      # Attached a contact number
+      contact.add_phone(:type => 'DEFAULT', number: user_address.phone)
+
+      # Save contact to your xero account.
+      contact.save!
 
       # Update our spree_users table with the contact id for
       # future reference
@@ -106,16 +110,16 @@ Spree::CheckoutController.class_eval do
           account_code: 200
         )
        end
-    end
 
-    # Optional if you want shipping to be included on the invoice statement
-    def add_shipping_to_line_items(invoice)
-      invoice.add_line_item(
-        description: "Postage and packaging",
-        quantity: 1,
-        unit_amount: @current_order.shipment_total,
-        account_code: 200
-      )
+       # Optional if you want shipping to be included on the invoice statement
+       invoice.add_line_item(
+         description: "Postage and packaging",
+         quantity: 1,
+         unit_amount: @current_order.shipment_total,
+         account_code: 200
+       )
+
+       return invoice
     end
 
     def marke_invoice_as_paid(invoice)
