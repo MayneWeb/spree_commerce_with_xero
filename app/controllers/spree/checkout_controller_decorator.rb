@@ -23,13 +23,11 @@ Spree::CheckoutController.class_eval do
 
 
         # Save the invoice
-        puts "SAVING INVOICE =====>>>>"
         invoice.save
 
         # Optional
         # Invoice must be saved, in xero, before you can mark an invoice paid
-        puts "MARKING INVOICE PAID =====>>>>"
-        marke_invoice_as_paid(invoice)
+        mark_invoice_as_paid(invoice)
 
         @current_order = nil
         flash.notice = Spree.t(:order_processed_successfully)
@@ -49,54 +47,54 @@ Spree::CheckoutController.class_eval do
     def create_xero_contact_and_return_contact_id
       user_address = spree_current_user.bill_address
       country_id = user_address.country_id
-			contact_full_name = user_address.firstname + " " + user_address.lastname # Must be unique in xero!!!!!
+      contact_full_name = user_address.firstname + " " + user_address.lastname # Must be unique in xero!!!!!
 
-			# Some logic will need to be in place to determin if
-			# if you already have a contact by the name of "Daveyon Mayne"
-			# in your xero account. If we do not perform this check and a name if found
-			# that matches your spree customer, you'll receive an error preventing
-			# our invoice from creating
-			contact = xero.Contact.all(where: {name: contact_full_name})
+      # Some logic will need to be in place to determin if
+      # if you already have a contact by the name of "Daveyon Mayne"
+      # in your xero account. If we do not perform this check and a name if found
+      # that matches your spree customer, you'll receive an error preventing
+      # our invoice from creating
+      contact = xero.Contact.all(where: {name: contact_full_name})
 
-			if contact.present?
-				# Contact returns an array. We need the first.
-				# It will never be a case where you have more than on as xero treats the "name"
-				# as unique
-				contact_id = contact.first.contact_id
-			else
-	      contact = @xero.Contact.build(
-	        name:           contact_full_name,
-	        first_name:     user_address.firstname,
-	        last_name:      user_address.lastname,
-	        email_address:  spree_current_user.email,
-	      )
+      if contact.present?
+        # Contact returns an array. We need the first.
+        # It will never be a case where you have more than on as xero treats the "name"
+        # as unique
+        contact_id = contact.first.contact_id
+      else
+        contact = @xero.Contact.build(
+          name:           contact_full_name,
+          first_name:     user_address.firstname,
+          last_name:      user_address.lastname,
+          email_address:  spree_current_user.email,
+        )
 
-	      # Include a contact address
-	      contact.add_address(
-	        type:           "STREET",
-	        line1:           user_address.address1,
-	        line2:           user_address.address2,
-	        city:            user_address.city,
-	        postal_code:     user_address.zipcode,
-	        country:         Spree::Country.find(country_id).name,
-	        # contact_number: user_address.phone # As of Xeroizer version 2.18
-	        # This will throw an error: undefined method [] for nil:NilClass
-	      )
+        # Include a contact address
+        contact.add_address(
+          type:           "STREET",
+          line1:           user_address.address1,
+          line2:           user_address.address2,
+          city:            user_address.city,
+          postal_code:     user_address.zipcode,
+          country:         Spree::Country.find(country_id).name,
+          # contact_number: user_address.phone # As of Xeroizer version 2.18
+          # This will throw an error: undefined method [] for nil:NilClass
+        )
 
-	      # Attached a contact number
-	      contact.add_phone(:type => 'DEFAULT', number: user_address.phone)
+        # Attached a contact number
+        contact.add_phone(:type => 'DEFAULT', number: user_address.phone)
 
-	      # Save contact to your xero account.
-	      contact.save!
-				contact_id = contact.contac_id
-			end
+        # Save contact to your xero account.
+        contact.save!
+        contact_id = contact.contac_id
+      end
 
-			# Update our spree_users table with the contact id for
-			# future reference
-			spree_current_user.update_attributes(xero_customer_id: contact_id)
+      # Update our spree_users table with the contact id for
+      # future reference
+      spree_current_user.update_attributes(xero_customer_id: contact_id)
 
-			# return the contact_id
-			return contact_id
+      # return the contact_id
+      return contact_id
     end
 
     def build_xero_invoice(contact_id)
@@ -137,7 +135,7 @@ Spree::CheckoutController.class_eval do
        return invoice
     end
 
-    def marke_invoice_as_paid(invoice)
+    def mark_invoice_as_paid(invoice)
       invoice_payment = {
         invoice:      invoice,
         account:      { code: '090' },
