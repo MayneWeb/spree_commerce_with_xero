@@ -66,7 +66,7 @@ Spree::CheckoutController.class_eval do
         postal_code:     user_address.zipcode,
         country:         Spree::Country.find(country_id).name,
         # contact_number: user_address.phone # As of Xeroizer version 2.18
-        # This will through an error undefined method [] for nil:NilClass
+        # This will throw an error: undefined method [] for nil:NilClass
       )
 
       # Attached a contact number
