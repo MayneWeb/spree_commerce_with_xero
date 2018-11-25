@@ -49,7 +49,7 @@ Spree::CheckoutController.class_eval do
     def create_xero_contact_and_return_contact_id
       user_address = spree_current_user.bill_address
       country_id = user_address.country_id
-			contact_full_name = user_address.firstname + " " + user_address.lastname
+			contact_full_name = user_address.firstname + " " + user_address.lastname # Must be unique in xero!!!!!
 
 			# Some logic will need to be in place to determin if
 			# if you already have a contact by the name of "Daveyon Mayne"
@@ -65,7 +65,7 @@ Spree::CheckoutController.class_eval do
 				contact_id = contact.first.contact_id
 			else
 	      contact = @xero.Contact.build(
-	        name:           user_address.firstname + " " + user_address.lastname, # Must be unique in xero!!!!!
+	        name:           contact_full_name,
 	        first_name:     user_address.firstname,
 	        last_name:      user_address.lastname,
 	        email_address:  spree_current_user.email,
